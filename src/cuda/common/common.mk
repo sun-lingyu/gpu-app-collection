@@ -21,7 +21,10 @@
 .SUFFIXES : .cu .cu_dbg.o .c_dbg.o .cpp_dbg.o .cu_rel.o .c_rel.o .cpp_rel.o .cubin .ptx
 
 INCLUDES += -I$(NVIDIA_COMPUTE_SDK_LOCATION)/../4.2/C/common/inc
-ADDITIONAL_LIBS += -L$(NVIDIA_COMPUTE_SDK_LOCATION)/../4.2/C/lib -lcutil_x86_64
+# No need to include SDK for SST RISCV
+ifneq ($(GPUAPPS_SST_MODE), 1)
+    ADDITIONAL_LIBS += -L$(NVIDIA_COMPUTE_SDK_LOCATION)/../4.2/C/lib -lcutil_x86_64
+endif
 
 # Add new SM Versions here as devices with new Compute Capability are released
 SM_VERSIONS   := 10 11 12 13 20 21 30 50 60 62 70 75
@@ -70,10 +73,43 @@ endif
 
 
 # Compilers
-NVCC       := $(CUDA_INSTALL_PATH)/bin/nvcc 
-CXX        := g++ -fPIC
-CC         := gcc -fPIC
-LINK       := g++ -fPIC
+# Check for whether to use Clang for SST or nvcc
+ifeq ($(GPUAPPS_SST_MODE),1) 
+    CLANG_PREFIX := $(LLVM_INSTALL_PATH)/bin/
+    RISCV_PREFIX := $(RISCV_TOOLCHAIN_INSTALL_PATH)/bin/riscv64-unknown-linux-gnu-
+    RISCV_SYSROOT := $(RISCV_TOOLCHAIN_INSTALL_PATH)/sysroot/
+    RISCV_CXX := $(wildcard $(RISCV_TOOLCHAIN_INSTALL_PATH)/riscv64-unknown-linux-gnu/include/c++/*/)
+    CUSTOM_CUDA_LIB := cudart_vanadis
+    CUSTOM_CUDA_LIB_PATH := $(SST_ELEMENTS_PATH)/src/sst/elements/balar/tests/vanadisLLVMRISCV
+
+    CXX_FLAGS_CUDA_WRAPPER := -include __clang_cuda_runtime_wrapper.h
+    CXX_FLAGS_RISCV_CUDA := -static --cuda-path=$(CUDA_INSTALL_PATH) -L$(CUSTOM_CUDA_LIB_PATH) -Wl,-static -l$(CUSTOM_CUDA_LIB) -L$(CUDA_INSTALL_PATH)/lib64 -Wl,-static -ldl -lrt -pthread
+    CXX_FLAGS_RISCV_LINUX := -static-libgcc -static-libstdc++ -static --gcc-toolchain=$(RISCV_TOOLCHAIN_INSTALL_PATH) --sysroot=$(RISCV_SYSROOT) -nostdlibinc -stdlib++-isystem$(RISCV_CXX)/ -stdlib++-isystem$(RISCV_SYSROOT)/usr/include -stdlib++-isystem$(RISCV_CXX)/riscv64-unknown-linux-gnu --target=riscv64-unknown-linux-gnu -march=rv64gc
+    C_FLAGS_RISCV_LINUX := --target=riscv64-unknown-linux-gnu -march=rv64gc -static-libgcc --gcc-toolchain=$(RISCV_TOOLCHAIN_INSTALL_PATH) --sysroot=$(RISCV_SYSROOT) 
+    
+    # Set CUDA gencode for Clang
+    # Tested with CUDA toolkit 11.7
+    GENCODE_SM10 =
+    GENCODE_SM13 =
+    GENCODE_SM20 =
+    GENCODE_SM30 =
+    GENCODE_SM35 = --cuda-gpu-arch=sm_35
+    GENCODE_SM50 = --cuda-gpu-arch=sm_50
+    GENCODE_SM60 = --cuda-gpu-arch=sm_60
+    GENCODE_SM62 = --cuda-gpu-arch=sm_62
+    GENCODE_SM70 = --cuda-gpu-arch=sm_70
+    GENCODE_SM75 = --cuda-gpu-arch=sm_75
+
+    NVCC       := $(CLANG_PREFIX)clang++ $(CXX_FLAGS_RISCV_CUDA) $(CXX_FLAGS_CUDA_WRAPPER) $(CXX_FLAGS_RISCV_LINUX)
+    CXX        := $(CLANG_PREFIX)clang++ -fPIC $(CXX_FLAGS_RISCV_LINUX)
+    CC         := $(CLANG_PREFIX)clang -std=c89 -fPIC $(C_FLAGS_RISCV_LINUX)
+    LINK       := $(CLANG_PREFIX)clang++ -fPIC $(CXX_FLAGS_RISCV_CUDA) $(CXX_FLAGS_CUDA_WRAPPER) $(CXX_FLAGS_RISCV_LINUX)
+else
+    NVCC       := $(CUDA_INSTALL_PATH)/bin/nvcc 
+    CXX        := g++ -fPIC
+    CC         := gcc -fPIC
+    LINK       := g++ -fPIC
+endif
 
 # Includes
 INCLUDES  += -I. -I$(CUDA_INSTALL_PATH)/include -I$(COMMONDIR)/inc -I$(SHAREDDIR)/inc
@@ -109,40 +145,43 @@ LIB_ARCH        := $(OSARCH)
 
 # Determining the necessary Cross-Compilation Flags
 # 32-bit OS, but we target 64-bit cross compilation
-ifeq ($(x86_64),1) 
-    NVCCFLAGS       += -m64
-    LIB_ARCH         = x86_64
-    ifneq ($(DARWIN),)
-         CXX_ARCH_FLAGS += -arch x86_64
-    else
-         CXX_ARCH_FLAGS += -m64
-    endif
-else 
-# 64-bit OS, and we target 32-bit cross compilation
-    ifeq ($(i386),1)
-        NVCCFLAGS       += -m32
-        LIB_ARCH         = i386
+# Set only when we are not compiling for SST
+ifneq ($(GPUAPPS_SST_MODE), 1)
+    ifeq ($(x86_64),1) 
+        NVCCFLAGS       += -m64
+        LIB_ARCH         = x86_64
         ifneq ($(DARWIN),)
-             CXX_ARCH_FLAGS += -arch i386
+            CXX_ARCH_FLAGS += -arch x86_64
         else
-             CXX_ARCH_FLAGS += -m32
+            CXX_ARCH_FLAGS += -m64
         endif
     else 
-        ifeq "$(strip $(HP_64))" ""
-            LIB_ARCH        = i386
-            NVCCFLAGS      += -m32
+    # 64-bit OS, and we target 32-bit cross compilation
+        ifeq ($(i386),1)
+            NVCCFLAGS       += -m32
+            LIB_ARCH         = i386
             ifneq ($(DARWIN),)
-               CXX_ARCH_FLAGS += -arch i386
+                CXX_ARCH_FLAGS += -arch i386
             else
-               CXX_ARCH_FLAGS += -m32
+                CXX_ARCH_FLAGS += -m32
             endif
-        else
-            LIB_ARCH        = x86_64
-            NVCCFLAGS      += -m64
-            ifneq ($(DARWIN),)
-               CXX_ARCH_FLAGS += -arch x86_64
+        else 
+            ifeq "$(strip $(HP_64))" ""
+                LIB_ARCH        = i386
+                NVCCFLAGS      += -m32
+                ifneq ($(DARWIN),)
+                    CXX_ARCH_FLAGS += -arch i386
+                else
+                    CXX_ARCH_FLAGS += -m32
+                endif
             else
-               CXX_ARCH_FLAGS += -m64
+                LIB_ARCH        = x86_64
+                NVCCFLAGS      += -m64
+                ifneq ($(DARWIN),)
+                    CXX_ARCH_FLAGS += -arch x86_64
+                else
+                    CXX_ARCH_FLAGS += -m64
+                endif
             endif
         endif
     endif
@@ -182,19 +221,22 @@ endif
 
 # Debug/release configuration
 ifeq ($(dbg),1)
-	COMMONFLAGS += -g
+    COMMONFLAGS += -g
     NVCCFLAGS   += -D_DEBUG
-	CXXFLAGS    += -D_DEBUG
-	CFLAGS      += -D_DEBUG
-	BINSUBDIR   := debug
-	LIBSUFFIX   := D
+    CXXFLAGS    += -D_DEBUG
+    CFLAGS      += -D_DEBUG
+    BINSUBDIR   := debug
+    LIBSUFFIX   := D
 else
-	COMMONFLAGS += -O2 
-	BINSUBDIR   := release
-	LIBSUFFIX   := 
-	NVCCFLAGS   += --compiler-options -fno-strict-aliasing
-	CXXFLAGS    += -fno-strict-aliasing
-	CFLAGS      += -fno-strict-aliasing
+    COMMONFLAGS += -O2 
+    BINSUBDIR   := release
+    LIBSUFFIX   := 
+    CXXFLAGS    += -fno-strict-aliasing
+    CFLAGS      += -fno-strict-aliasing
+    ifneq ($(GPUAPPS_SST_MODE), 1)
+        # nvcc flags, not valid for clang
+        NVCCFLAGS   += --compiler-options -fno-strict-aliasing
+    endif
 endif
 
 # architecture flag for cubin build
@@ -292,20 +334,25 @@ endif
 LIB += $(ADDITIONAL_LIBS)
 
 # If dynamically linking to CUDA and CUDART, we exclude the libraries from the LIB
-ifeq ($(USECUDADYNLIB),1)
-     LIB += ${OPENGLLIB} $(PARAMGLLIB) $(RENDERCHECKGLLIB) ${LIB} -ldl -rdynamic 
+ifeq ($(GPUAPPS_SST_MODE), 1)
+    # RISCV SST does not need CUDART but need our custom rt
+    LIB += -l$(CUSTOM_CUDA_LIB)
 else
-# static linking, we will statically link against CUDA and CUDART
-  ifeq ($(USEDRVAPI),1)
-     LIB += -lcuda   ${OPENGLLIB} $(PARAMGLLIB) $(RENDERCHECKGLLIB) ${LIB} 
-  else
-     ifeq ($(emu),1) 
-         LIB += -lcudartemu
-     else 
-         LIB += -lcudart
-     endif
-     LIB += ${OPENGLLIB} $(PARAMGLLIB) $(RENDERCHECKGLLIB) ${LIB}
-  endif
+    ifeq ($(USECUDADYNLIB),1)
+        LIB += ${OPENGLLIB} $(PARAMGLLIB) $(RENDERCHECKGLLIB) ${LIB} -ldl -rdynamic 
+    else
+        # static linking, we will statically link against CUDA and CUDART
+        ifeq ($(USEDRVAPI),1)
+            LIB += -lcuda   ${OPENGLLIB} $(PARAMGLLIB) $(RENDERCHECKGLLIB) ${LIB} 
+        else
+            ifeq ($(emu),1) 
+                LIB += -lcudartemu
+            else 
+                LIB += -lcudart
+            endif
+            LIB += ${OPENGLLIB} $(PARAMGLLIB) $(RENDERCHECKGLLIB) ${LIB}
+        endif
+    endif
 endif
 
 ifeq ($(USECUFFT),1)

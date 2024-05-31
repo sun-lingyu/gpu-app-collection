@@ -3,6 +3,34 @@ export GPUAPPS_SETUP_ENVIRONMENT_WAS_RUN=
 export GPUAPPS_ROOT="$( cd "$( dirname "$BASH_SOURCE" )" && pwd )"/../
 export CUDA_PATH=$CUDA_INSTALL_PATH
 
+# Check for SST related environment variables
+# Need Clang/LLVM and RISCV toolchain
+# As well as SST elements repo path
+if [[ $# -gt 0 && $1 == sst ]]; then
+    echo "Checking for SST-Vanadis integration env vars..."
+    if [ -z "$LLVM_INSTALL_PATH" ]; then
+        echo "ERROR *** LLVM_INSTALL_PATH not set;"
+        return
+    else
+        echo "Using Clang/LLVM at $LLVM_INSTALL_PATH"
+    fi
+    if [ -z "$RISCV_TOOLCHAIN_INSTALL_PATH" ]; then
+        echo "ERROR *** RISCV_TOOLCHAIN_INSTALL_PATH not set;"
+        return
+    else
+        echo "Using RISCV GCC toolchain at $RISCV_TOOLCHAIN_INSTALL_PATH"
+    fi
+    if [ -z "$SST_ELEMENTS_PATH" ]; then
+        echo "ERROR *** SST_ELEMENTS_PATH not set;"
+        return
+    else
+        echo "Using SST elements repo at $SST_ELEMENTS_PATH"
+    fi
+    export GPUAPPS_SST_MODE=1
+else
+    export GPUAPPS_SST_MODE=0
+fi
+
 if [ ! -d $NVIDIA_COMPUTE_SDK_LOCATION/../4.2 ]; then
     echo "SDK 4.2 Not detected - installing and building"
     if [ ! -f ./gpucomputingsdk_4.2.9_linux.run ]; then
