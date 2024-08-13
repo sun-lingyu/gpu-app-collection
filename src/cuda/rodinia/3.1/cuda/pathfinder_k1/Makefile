@@ -9,7 +9,7 @@ EXE = pathfinder
 
 release:
 	$(CC) -c pathfinder.cu -I$(INCLUDE)
-	g++ -fPIC -m64 -o pathfinder pathfinder.o  -L$(CUDA_INSTALL_PATH)/lib64   -lcudart
+	g++ -fPIC -o pathfinder pathfinder.o  -L$(CUDA_INSTALL_PATH)/lib64   -lcudart
  
 enum:
 	$(CC) -deviceemu $(SRC) -o $(EXE) -I$(INCLUDE) -L$$(CUDA_LIB_DIR) 

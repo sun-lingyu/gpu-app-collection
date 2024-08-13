@@ -7,10 +7,9 @@
 /*----------- using cycle counter ------------*/
      __inline__ uint64_t rdtsc() 
      {
-          uint32_t lo, hi;
-             /* We cannot use "=A", since this would use %rax on x86_64 */
-             __asm__ __volatile__ ("rdtsc" : "=a" (lo), "=d" (hi));
-                return (uint64_t)hi << 32 | lo;
+          uint64_t cntvct;
+          asm volatile ("mrs %0, cntvct_el0; " : "=r"(cntvct) :: "memory");
+          return cntvct;
      }
 
 unsigned long long start_cycles;

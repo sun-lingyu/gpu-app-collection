@@ -85,7 +85,7 @@ OPT        ?= -O3
 ifeq ($(ARCH),ARM32)
 	LIB        ?= -lm5op_arm
 else
-	LIB        ?= -L/usr/lib64 -lcutil_x86_64 -lm5op_x86
+	LIB        ?= -L/usr/lib64 -lm5op_arm
 endif
 SRCDIR     ?=
 ROOTDIR    ?=
@@ -148,7 +148,7 @@ ifeq ($(ARCH),ARM32)
 else
 	nvcc $(CUFLAGS) $(OPT) -c -arch $(COMPUTETARGET) --keep --compiler-options -fno-strict-aliasing \
 		$(GEM5GPUFLAGS) -I. -I$(CUDAHOME)/include/ -I$(SDKINCDIR) \
-		 $(INCFLAGEXTRA) -L$(LIBDIR) -lcutil -DUNIX $< -o $(EXECUTABLE)
+		 $(INCFLAGEXTRA) -L$(LIBDIR) -DUNIX $< -o $(EXECUTABLE)
 	python ../../common/sizeHack.py -f $<.cpp -t $(COMPUTETARGET)
 endif
 ifneq ($(NVCC_VERSION),1.1)

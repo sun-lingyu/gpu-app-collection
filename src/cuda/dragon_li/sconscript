@@ -52,7 +52,7 @@ for dirname in hydrazine_dirs:
 hydrazine_lib = env.StaticLibrary('libhydrazine', hydrazine_src, LIBS=['-lrt'])
 
 NVCC = env['ENV']['CUDA_INSTALL_PATH']+'/bin/nvcc '
-NVCCFLAGS = ' -m64 -O3 '
+NVCCFLAGS = ' -O3 '
 #NVCCFLAGS = ' -m64 -g -G '
 actionCommon = NVCC + NVCCFLAGS + ' -I$BOOST_ROOT/include -I. -I./hydrazine $SOURCES -o $TARGET $LIBS ' + env['_CPPDEFFLAGS']
 

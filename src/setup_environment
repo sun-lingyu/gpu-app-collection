@@ -106,7 +106,9 @@ fi
 if [ $CUDA_VERSION_MAJOR -eq 11 ]; then
     export CUDA_CPPFLAGS="$CUDA_CPPFLAGS -gencode=arch=compute_61,code=compute_61"
     export CUDA_CPPFLAGS="$CUDA_CPPFLAGS -gencode=arch=compute_70,code=compute_70"
+    export CUDA_CPPFLAGS="$CUDA_CPPFLAGS -gencode=arch=compute_72,code=compute_72"
     export CUDA_CPPFLAGS="$CUDA_CPPFLAGS -gencode=arch=compute_75,code=compute_75"
+    export CUDA_CPPFLAGS="$CUDA_CPPFLAGS -gencode=arch=compute_87,code=compute_87"
     export CUDA_CPPFLAGS="$CUDA_CPPFLAGS -std=c++14"
 fi
 
@@ -169,6 +171,11 @@ fi
 # 20 Deprecated in 9+
 if [ $CUDA_VERSION_MAJOR -gt 8 ]; then
     export MAKE_ARGS="$MAKE_ARGS GENCODE_SM20="
+fi
+
+if [ $CUDA_VERSION_MAJOR -gt 10 ]; then
+    export MAKE_ARGS="$MAKE_ARGS GENCODE_SM72="
+    export MAKE_ARGS="$MAKE_ARGS GENCODE_SM87="
 fi
 
 export MAKE_ARGS="$MAKE_ARGS CUBLAS_LIB=cublas_static CUDNN_LIB=cudnn_static"

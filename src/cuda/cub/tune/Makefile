@@ -111,9 +111,6 @@ endif
 ifeq ($(force32), 1)
 	CPU_ARCH = -m32
 	CPU_ARCH_SUFFIX = i386
-else
-	CPU_ARCH = -m64
-	CPU_ARCH_SUFFIX = x86_64
 endif
 
 # CUDA ABI enable/disable (enabled by default) 

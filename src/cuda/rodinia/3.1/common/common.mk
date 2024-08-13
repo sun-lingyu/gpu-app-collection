@@ -21,7 +21,7 @@
 .SUFFIXES : .cu .cu_dbg.o .c_dbg.o .cpp_dbg.o .cu_rel.o .c_rel.o .cpp_rel.o .cubin .ptx
 
 INCLUDES += -I$(GPUAPPS_ROOT)src/cuda/NVIDIA_CUDA-11.0_Samples/common/inc
-ADDITIONAL_LIBS := -L$(GPUAPPS_ROOT)/src/cuda/common/lib -lcutil_x86_64
+ADDITIONAL_LIBS := -L$(GPUAPPS_ROOT)/src/cuda/common/lib
 
 # Add new SM Versions here as devices with new Compute Capability are released
 SM_VERSIONS   := 61 70 75
@@ -137,13 +137,7 @@ else
                CXX_ARCH_FLAGS += -m32
             endif
         else
-            LIB_ARCH        = x86_64
-            NVCCFLAGS      += -m64
-            ifneq ($(DARWIN),)
-               CXX_ARCH_FLAGS += -arch x86_64
-            else
-               CXX_ARCH_FLAGS += -m64
-            endif
+            LIB_ARCH        = aarch64
         endif
     endif
 endif
