@@ -234,7 +234,7 @@ int main(int argc, char **argv)
     int writeVisual = 0; //write output (subbands) in visual (tiled) order instead of linear
     char * pos;
 
-    while ((ch = getopt_long(argc, argv, "d:c:b:l:D:fr95wh", longopts, &optindex)) != -1) {
+    while ((ch = getopt_long(argc, argv, "d:c:b:l:D:fr95wh", longopts, &optindex)) != 255) {
         switch (ch) {
         case 'd':
             pixWidth = atoi(optarg);

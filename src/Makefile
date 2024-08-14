@@ -1,5 +1,5 @@
 
-ifeq ($(GPUAPPS_SETUP_ENVIRONMENT_WAS_RUN), 0)
+ifneq ($(GPUAPPS_SETUP_ENVIRONMENT_WAS_RUN), 1)
 $(error You must run "source setup_environment before calling make")
 endif
 
@@ -428,7 +428,7 @@ cutlass:
 	mkdir -p $(BINDIR)/$(BINSUBDIR)/
 	echo $(BINDIR)
 	git submodule init && git submodule update
-	$(SETENV) mkdir -p cuda/cutlass-bench/build && cd cuda/cutlass-bench/build && cmake .. -DUSE_GPGPUSIM=1 -DCUTLASS_NVCC_ARCHS=70 && make cutlass_profiler -j12
+	$(SETENV) mkdir -p cuda/cutlass-bench/build && cd cuda/cutlass-bench/build && cmake .. -DUSE_GPGPUSIM=1 -DCUTLASS_NVCC_ARCHS="72;87" && make cutlass_profiler -j12
 	echo $(BINDIR)
 	cp cuda/cutlass-bench/build/tools/profiler/cutlass_profiler $(BINDIR)/$(BINSUBDIR)/cutlass_perf_test_k1
 	# cp $(BINDIR)/$(BINSUBDIR)/cutlass_perf_test_k1 $(BINDIR)/$(BINSUBDIR)/cutlass_perf_test_k2
